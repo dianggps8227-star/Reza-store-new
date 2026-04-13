@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>TOKO AZRE STORE - Digital Payment</title>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', Roboto, sans-serif; background: #0b1627; color: white; }
+        
+        .minecraft-banner {
+            width: 100%; height: 300px;
+            background-image: linear-gradient(to bottom, rgba(0,0,0,0) 60%, #0b1627), 
+                              url('https://store-images.s-microsoft.com/image/apps.60323.14294656681058683.4d17bdd8-7026-429a-846f-cf7836bc9e56.a69e6905-8926-4a48-b243-14a039b97aae?mode=scale&q=90&h=1080&w=1920&format=jpg');
+            background-size: cover; background-position: center;
+        }
+
+        .container { max-width: 1000px; margin: -50px auto 40px; padding: 20px; position: relative; z-index: 10; }
+        .box { width: 100%; max-width: 450px; margin: 40px auto; padding: 30px; background: #1a2a47; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); }
+        .input-owner { background: rgba(0,0,0,0.3); border: 1px solid #00d4ff; padding: 12px; border-radius: 8px; color: white; margin-bottom: 12px; width: 100%; box-sizing: border-box; outline: none; }
+        
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #00d4ff; color: #0b1627; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { transform: translateY(-2px); background: white; }
+
+        .shop-header { 
+            display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; 
+            background: rgba(26, 42, 71, 0.9); padding: 15px 25px; border-radius: 15px; 
+            margin-bottom: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); 
+        }
+
+        .header-saldo { display: flex; flex-direction: column; color: #00d4ff; font-weight: bold; font-size: 14px; }
+        .shop-header h2 { margin: 0; cursor: pointer; text-align: center; font-size: 20px; }
+        .profile-wrapper { display: flex; justify-content: flex-end; position: relative; }
+        .profile-section { display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.05); padding: 5px 12px; border-radius: 50px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); }
+        .profile-logo { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0b1627; font-size: 14px; }
+        
+        .dropdown-content { display: none; position: absolute; right: 0; top: 50px; background: #1a2a47; min-width: 200px; border-radius: 12px; z-index: 100; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+        .show { display: block; }
+        .dropdown-content a { color: white; padding: 12px 16px; text-decoration: none; display: block; font-size: 13px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: left; }
+        .dropdown-content a:hover { background: #243a5f; }
+
+        .grid-toko { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .card { background: #1a2a47; padding: 20px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; }
+        .card img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; }
+        .badge { font-size: 9px; background: #00d4ff; color: #0b1627; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; align-self: center; text-transform: uppercase; font-weight: bold; }
+        
+        .desc-box { font-size: 11px; color: #00d4ff; background: rgba(0, 212, 255, 0.1); padding: 8px; border-radius: 8px; margin: 10px 0; text-align: left; border-left: 3px solid #00d4ff; }
+
+        .nominal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
+        .btn-nom { background: rgba(255,255,255,0.05); border: 1px solid rgba(0,212,255,0.3); color: white; padding: 8px; font-size: 11px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        .btn-nom:hover { background: #00d4ff; color: #0b1627; }
+
+        .owner-card { background: #0f1c30; border: 2px solid #ffd700; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; border: 1px solid rgba(255,255,255,0.05); font-size: 11px; text-align: left; }
+        th { color: #ffd700; background: rgba(255,215,0,0.1); }
+    </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+const adminWA = "6283862091550";
+
+function initApp() {
+    const savedUser = sessionStorage.getItem("activeUser");
+    if (savedUser) {
+        window.currentUser = savedUser;
+        window.currentRole = sessionStorage.getItem("activeRole");
+        window.currentView = sessionStorage.getItem("currentView") || "toko";
+        refreshUI();
+    } else { showLogin(); }
+}
+
+function refreshUI() {
+    if (window.currentView === "toko") showListToko();
+    else if (window.currentView === "owner") showOwnerPanel();
+    else if (window.currentView === "topup") showTopUp();
+    else if (window.currentView === "pengaturan") showSettings();
+}
+
+function getUsers() { return JSON.parse(localStorage.getItem("db_users")) || []; }
+function getProduk() { return JSON.parse(localStorage.getItem("db_produk")) || []; }
+
+// --- AUTH ---
+function showLogin() {
+    document.getElementById("app").innerHTML = `
+        <div class="minecraft-banner"></div>
+        <div class="container">
+            <div class="box">
+                <h2>TOKO AZRE STORE</h2>
+                <input type="text" id="lU" placeholder="Username" class="input-owner">
+                <input type="password" id="lP" placeholder="Password" class="input-owner">
+                <button onclick="prosesLogin()">MASUK</button>
+                <p onclick="showRegister()" style="cursor:pointer; font-size:12px; margin-top:10px;">Daftar Akun</p>
+            </div>
+        </div>`;
+}
+
+function showRegister() {
+    document.getElementById("app").innerHTML = `
+        <div class="minecraft-banner"></div>
+        <div class="container">
+            <div class="box">
+                <h2>DAFTAR AKUN</h2>
+                <input type="email" id="rE" placeholder="Gmail" class="input-owner">
+                <input type="text" id="rU" placeholder="Username" class="input-owner">
+                <input type="password" id="rP" placeholder="Password" class="input-owner">
+                <button onclick="prosesDaftar()">BUAT AKUN</button>
+                <p onclick="showLogin()" style="cursor:pointer; font-size:12px; margin-top:10px;">Kembali Login</p>
+            </div>
+        </div>`;
+}
+
+function prosesLogin() {
+    let u = document.getElementById("lU").value, p = document.getElementById("lP").value;
+    if (u === "sendy" && p === "sendy123") { setSession(u, "owner"); }
+    else {
+        let userFound = getUsers().find(x => x.user === u && x.pass === p);
+        if (userFound) setSession(u, "user"); else alert("Login Gagal!");
+    }
+}
+
+function setSession(u, r) {
+    sessionStorage.setItem("activeUser", u); sessionStorage.setItem("activeRole", r);
+    window.currentUser = u; window.currentRole = r; window.currentView = "toko";
+    refreshUI();
+}
+
+function logout() { sessionStorage.clear(); location.reload(); }
+
+// --- TOKO ---
+function showListToko() {
+    window.currentView = "toko"; sessionStorage.setItem("currentView", "toko");
+    let me = getUsers().find(u => u.user === window.currentUser) || {saldo:0};
+    let prod = getProduk();
+
+    document.getElementById("app").innerHTML = `
+        <div class="minecraft-banner"></div>
+        <div class="container">
+            <div class="shop-header">
+                <div class="header-saldo"><span style="font-size:9px; color:#aaa; font-weight:normal;">Saldo Anda:</span>Rp ${(me.saldo||0).toLocaleString()}</div>
+                <h2 onclick="showListToko()">TOKO AZRE STORE</h2>
+                <div class="profile-wrapper">
+                    <div class="profile-section" onclick="toggleDropdown()">
+                        <div class="profile-logo" style="background:${window.currentRole==='owner'?'#ffd700':'#00d4ff'}">${window.currentUser[0].toUpperCase()}</div>
+                        <div style="font-size:12px; font-weight:bold;">${window.currentUser}</div>
+                    </div>
+                    <div id="myDropdown" class="dropdown-content">
+                        <a onclick="showTopUp()">💳 Top Up Saldo</a>
+                        <a onclick="showSettings()">⚙️ Pengaturan Profil</a>
+                        ${window.currentRole==='owner'?'<a onclick="showOwnerPanel()" style="color:#ffd700;">👑 Panel Owner</a>':''}
+                        <a onclick="logout()" style="color:#ff4d4d;">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-toko">${prod.map(p => `
+                <div class="card">
+                    <div class="badge">${p.category}</div>
+                    <img src="${p.img}">
+                    <h4>${p.nama}</h4>
+                    <div style="flex-grow: 1;">
+                        ${p.category === 'Minecraft Host' && p.desc ? `<div class="desc-box"><b>Spek:</b><br>${p.desc}</div>` : ''}
+                    </div>
+                    <p style="color:#00d4ff; font-weight:bold; margin-top:10px;">Rp ${p.harga.toLocaleString()}</p>
+                    <button onclick="alert('Hubungi WA Admin untuk beli!')">Beli Sekarang</button>
+                </div>`).join("")}</div>
+        </div>`;
+}
+
+// --- TOP UP ---
+function showTopUp() {
+    window.currentView = "topup"; sessionStorage.setItem("currentView", "topup");
+    const nominals = [3000, 5000, 10000, 15000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000];
+    document.getElementById("app").innerHTML = `
+        <div class="container" style="margin-top:100px;">
+            <div class="box">
+                <h2 style="color:#00d4ff;">💳 TOP UP SALDO</h2>
+                <div class="nominal-grid">${nominals.map(n => `<button class="btn-nom" onclick="document.getElementById('topupAmt').value=${n}">${n >= 1000 ? (n/1000)+'k' : n}</button>`).join("")}</div>
+                <input type="number" id="topupAmt" placeholder="Nominal (Rp)" class="input-owner">
+                <button onclick="konfirmasiTopUp()">HUBUNGI ADMIN</button>
+                <button onclick="showListToko()" style="background:transparent; color:#aaa; margin-top:10px;">KEMBALI</button>
+            </div>
+        </div>`;
+}
+
+function konfirmasiTopUp() {
+    let amt = document.getElementById("topupAmt").value;
+    if(!amt) return alert("Pilih nominal!");
+    window.open(`https://wa.me/${adminWA}?text=Halo Admin, saya ${window.currentUser} mau topup Rp ${amt}`);
+}
+
+// --- PENGATURAN PROFIL ---
+function showSettings() {
+    window.currentView = "pengaturan"; sessionStorage.setItem("currentView", "pengaturan");
+    let users = getUsers();
+    let me = users.find(u => u.user === window.currentUser);
+    
+    // Default data jika user tidak ditemukan (misal owner yang belum masuk DB)
+    if (!me) me = { user: window.currentUser, pass: window.currentUser === "sendy" ? "sendy123" : "123", email: "" };
+    
+    document.getElementById("app").innerHTML = `
+        <div class="container" style="margin-top:100px;">
+            <div class="box">
+                <h2 style="color:#00d4ff;">⚙️ PENGATURAN PROFIL</h2>
+                <div style="text-align:left; font-size:13px;">
+                    <label>Nama Username:</label><input type="text" id="setU" value="${me.user}" class="input-owner">
+                    <label>Alamat Gmail:</label><input type="text" id="setE" value="${me.email || ''}" class="input-owner">
+                    <label>Password Baru:</label><input type="password" id="setP" value="${me.pass}" class="input-owner">
+                </div>
+                <button onclick="saveSet()">SIMPAN PERUBAHAN</button>
+                <button onclick="showListToko()" style="background:transparent; color:#aaa; margin-top:10px;">KEMBALI</button>
+            </div>
+        </div>`;
+}
+
+function saveSet() {
+    let newU = document.getElementById("setU").value;
+    let newE = document.getElementById("setE").value;
+    let newP = document.getElementById("setP").value;
+    
+    if(!newU || !newP) return alert("Data tidak boleh kosong!");
+
+    if(window.currentRole === 'owner' && window.currentUser === "sendy") {
+        alert("Profil Owner diperbarui secara lokal untuk sesi ini.");
+        showListToko();
+    } else {
+        let users = getUsers();
+        let i = users.findIndex(u => u.user === window.currentUser);
+        if(i !== -1) {
+            users[i].user = newU;
+            users[i].email = newE;
+            users[i].pass = newP;
+            localStorage.setItem("db_users", JSON.stringify(users));
+            alert("Profil berhasil diperbarui!");
+            if(newU !== window.currentUser) logout(); else showListToko();
+        }
+    }
+}
+
+// --- PANEL OWNER ---
+function showOwnerPanel() {
+    window.currentView = "owner"; sessionStorage.setItem("currentView", "owner");
+    let users = getUsers();
+    let prod = getProduk();
+    document.getElementById("app").innerHTML = `
+        <div class="container" style="margin-top:100px;">
+            <h2 style="color:gold; text-align:center;">👑 PANEL OWNER</h2>
+            
+            <div class="owner-card">
+                <h3>👥 Data User Terdaftar</h3>
+                <table><tr><th>User</th><th>Gmail</th><th>Saldo</th></tr>
+                ${users.map(u => `<tr><td>${u.user}</td><td>${u.email}</td><td>Rp ${(u.saldo||0).toLocaleString()}</td></tr>`).join("")}
+                </table>
+            </div>
+
+            <div class="owner-card">
+                <h3>💰 Give Saldo Manual</h3>
+                <input type="text" id="target" placeholder="Username User" class="input-owner" style="border-color:gold">
+                <input type="number" id="amt" placeholder="Jumlah Saldo" class="input-owner" style="border-color:gold">
+                <button onclick="prosesGive()" style="background:gold; color:black;">KIRIM SALDO</button>
+            </div>
+
+            <div class="owner-card">
+                <h3>📦 Kelola Produk</h3>
+                <select id="nC" class="input-owner" style="border-color:gold; background:#0b1627;">
+                    <option value="Free Fire">Free Fire</option>
+                    <option value="Mobile Legends">Mobile Legends</option>
+                    <option value="Minecraft Host">Minecraft Host</option>
+                </select>
+                <input type="text" id="nN" class="input-owner" placeholder="Nama Produk" style="border-color:gold">
+                <input type="text" id="nD" class="input-owner" placeholder="Spek (Khusus Minecraft)" style="border-color:gold">
+                <input type="number" id="nH" class="input-owner" placeholder="Harga" style="border-color:gold">
+                <input type="text" id="nL" class="input-owner" placeholder="URL Gambar" style="border-color:gold">
+                <button onclick="addBrg()" style="background:gold; color:black;">TAMBAH PRODUK</button>
+                <hr style="opacity:0.1; margin:15px 0;">
+                <div id="listOwnerPrd">
+                ${prod.map((p, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px;"><span>[${p.category}] ${p.nama}</span><button style="width:70px; background:red; font-size:10px; padding:5px;" onclick="delBrg(${i})">HAPUS</button></div>`).join("")}
+                </div>
+            </div>
+            <button onclick="showListToko()" style="background:white; color:black;">← KEMBALI</button>
+        </div>`;
+}
+
+function prosesGive() {
+    let t = document.getElementById("target").value, a = parseInt(document.getElementById("amt").value);
+    let users = getUsers();
+    let idx = users.findIndex(u => u.user === t);
+    if(idx === -1) return alert("User tidak ditemukan!");
+    users[idx].saldo = (users[idx].saldo || 0) + a;
+    localStorage.setItem("db_users", JSON.stringify(users));
+    alert("Saldo terkirim!"); refreshUI();
+}
+
+function addBrg() {
+    let c = document.getElementById("nC").value, n = document.getElementById("nN").value, d = document.getElementById("nD").value, h = document.getElementById("nH").value, l = document.getElementById("nL").value;
+    let prod = getProduk();
+    prod.push({ category: c, nama: n, desc: (c==='Minecraft Host'?d:''), harga: parseInt(h), img: l || "https://via.placeholder.com/150" });
+    localStorage.setItem("db_produk", JSON.stringify(prod)); refreshUI();
+}
+
+function delBrg(i) {
+    let prod = getProduk(); prod.splice(i, 1);
+    localStorage.setItem("db_produk", JSON.stringify(prod)); refreshUI();
+}
+
+function prosesDaftar() {
+    let u = document.getElementById("rU").value, p = document.getElementById("rP").value, e = document.getElementById("rE").value;
+    if(!u || !p) return alert("Username dan Password wajib!");
+    let users = getUsers();
+    users.push({ user: u, pass: p, email: e, saldo: 0 });
+    localStorage.setItem("db_users", JSON.stringify(users));
+    alert("Berhasil!"); showLogin();
+}
+
+function toggleDropdown() { document.getElementById("myDropdown").classList.toggle("show"); }
+initApp();
+</script>
+</body>
+</html>
